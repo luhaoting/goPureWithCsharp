@@ -1,0 +1,52 @@
+[
+  {
+    "count": 9,
+    "data_source": [{
+      "count": 9,
+      "file": "Ability.xlsx",
+      "sheet": "属性表"
+    }],
+    "data_ver": "2.23.0.20251208210831",
+    "hash_code": "sha256:b763ceea84a514cc83e422b030b623874bc5f22b75bb4e41904fddf029d7c60e",
+    "xres_ver": "2.23.0"
+  },
+  {"proy.config.ExcelAbilityAttribute": [
+    {
+      "attribute_id": 1001,
+      "name": "战力"
+    },
+    {
+      "attribute_id": 2001,
+      "name": "厨力值"
+    },
+    {
+      "attribute_id": 2002,
+      "name": "厨力速度"
+    },
+    {
+      "attribute_id": 2003,
+      "name": "厨力效率"
+    },
+    {
+      "attribute_id": 2004,
+      "name": "订单烹饪时间减免"
+    },
+    {
+      "attribute_id": 2201,
+      "name": "订单额外货币奖励"
+    },
+    {
+      "attribute_id": 3001,
+      "name": "最大生命"
+    },
+    {
+      "attribute_id": 3002,
+      "name": "攻击力"
+    },
+    {
+      "attribute_id": 4001,
+      "name": "当前生命"
+    }
+  ]},
+  "proy.config.ExcelAbilityAttribute"
+]

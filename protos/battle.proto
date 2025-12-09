@@ -1,0 +1,168 @@
+syntax = "proto3";
+
+package battle;
+
+option csharp_namespace = "GoPureWithCsharp.Battle";
+option go_package = "github.com/luhaoting/goPureWithCsharp/pkg/proto;proto";
+
+// ============================================================================
+// 基础数据结构
+// ============================================================================
+
+// 队伍信息
+message Team {
+  repeated uint32 lineup = 1;  // 阵容ID列表
+  uint32 team_id = 2;          // 队伍ID
+  string team_name = 3;        // 队伍名称
+}
+
+// ============================================================================
+// 战斗请求相关
+// ============================================================================
+
+// 开始战斗请求
+message StartBattle {
+  Team atk = 1;        // 攻击方队伍
+  Team def = 2;        // 防守方队伍
+  uint32 battle_id = 3; // 战斗ID
+  int64 timestamp = 4;  // 时间戳
+}
+
+// 战斗输入 (通用请求格式)
+message BattleInput {
+  uint32 op_id = 1;    // 操作ID
+  bytes raw_data = 2;  // 原始数据
+  map<string, string> params = 3; // 参数映射
+}
+
+// 使用道具请求
+message BattleUseItem {
+  repeated uint32 item_ids = 1; // 道具ID列表
+  uint32 user_id = 2;           // 使用者ID
+  int32 quantity = 3;           // 数量
+}
+
+// ============================================================================
+// 战斗响应相关
+// ============================================================================
+
+// 战斗结果
+message BattleResult {
+  uint32 winner = 1;           // 胜方队伍ID
+  uint32 loser = 2;            // 败方队伍ID
+  int32 atk_damage = 3;        // 攻击方伤害
+  int32 def_damage = 4;        // 防守方伤害
+  repeated uint32 kills = 5;   // 击杀列表
+  int64 duration = 6;          // 战斗持续时间(毫秒)
+  int32 battle_score = 7;      // 战斗积分
+}
+
+// 战斗状态
+message BattleStatus {
+  uint32 battle_id = 1;        // 战斗ID
+  int32 round = 2;             // 当前回合
+  int32 atk_health = 3;        // 攻击方生命值
+  int32 def_health = 4;        // 防守方生命值
+  string state = 5;            // 战斗状态 (running/paused/finished)
+  int64 timestamp = 6;         // 时间戳
+}
+
+// ============================================================================
+// 通用响应格式
+// ============================================================================
+
+// 通用响应消息
+message BattleResponse {
+  int32 code = 1;              // 错误码 (0=成功)
+  string message = 2;          // 消息
+  bytes result = 3;            // 结果数据(序列化的具体消息)
+  int64 timestamp = 4;         // 时间戳
+}
+
+// 批量战斗请求
+message BatchBattleRequest {
+  repeated StartBattle battles = 1; // 战斗列表
+  string batch_id = 2;              // 批次ID
+  int32 parallel = 3;               // 是否并行处理
+}
+
+// 批量战斗响应
+message BatchBattleResponse {
+  repeated BattleResult results = 1; // 战斗结果列表
+  string batch_id = 2;               // 批次ID
+  int32 success_count = 3;           // 成功数
+  int32 failure_count = 4;           // 失败数
+  int64 total_duration = 5;          // 总耗时(毫秒)
+}
+
+// ============================================================================
+// 错误码定义
+// ============================================================================
+
+enum BattleErrorCode {
+  SUCCESS = 0;                 // 成功
+  INVALID_REQUEST = 1;         // 请求格式错误
+  TEAM_NOT_FOUND = 2;          // 队伍未找到
+  INVALID_TEAM_SIZE = 3;       // 队伍大小无效
+  BATTLE_NOT_FOUND = 4;        // 战斗未找到
+  DUPLICATE_BATTLE = 5;        // 战斗重复
+  INTERNAL_ERROR = 6;          // 内部错误
+  TIMEOUT = 7;                 // 超时
+  INVALID_PROTO_FORMAT = 8;    // Protobuf 格式错误
+}
+
+// ============================================================================
+// 事件和回放相关
+// ============================================================================
+
+// 战斗事件 (用于回放)
+message BattleEvent {
+  int64 timestamp = 1;         // 事件时间戳 (毫秒)
+  string event_type = 2;       // 事件类型: "attack"|"skill"|"item"|"heal"|"status"|"end"
+  uint32 performer_id = 3;     // 执行者ID (角色/队伍)
+  uint32 target_id = 4;        // 目标ID
+  int32 value = 5;             // 事件值 (伤害/治疗/数值)
+  map<string, string> extra = 6; // 额外数据 (技能ID、道具ID等)
+}
+
+// 战斗回放
+message BattleReplay {
+  uint32 battle_id = 1;                // 战斗ID
+  int64 start_time = 2;                // 战斗开始时间戳
+  int64 end_time = 3;                  // 战斗结束时间戳
+  Team atk_team = 4;                   // 攻击方队伍
+  Team def_team = 5;                   // 防守方队伍
+  repeated BattleEvent events = 6;     // 事件时间线 (按时间戳排序)
+  BattleResult result = 7;             // 最终战斗结果
+  string version = 8;                  // 回放格式版本 (例如 "1.0")
+}
+
+// ============================================================================
+// 异步通知相关 (C# -> Go)
+// ============================================================================
+
+// 战斗通知类型枚举
+enum NotificationType {
+  STATUS_UPDATE = 0;           // 状态更新
+  EVENT_OCCURRED = 1;          // 事件发生
+  BATTLE_COMPLETED = 2;        // 战斗完成
+  ERROR_OCCURRED = 3;          // 错误发生
+}
+
+// 战斗进度报告
+message ProgressReport {
+  uint32 battle_id = 1;        // 战斗ID
+  int32 progress_percent = 2;  // 进度百分比 (0-100)
+  int32 current_round = 3;     // 当前回合
+  BattleStatus status = 4;     // 当前战斗状态
+  int64 timestamp = 5;         // 时间戳
+}
+
+// 战斗通知 (异步通知，由 C# 回调 Go)
+message BattleNotification {
+  int64 timestamp = 1;                    // 通知时间戳
+  NotificationType notification_type = 2; // 通知类型
+  uint32 battle_id = 3;                   // 战斗ID
+  bytes payload = 4;                      // 序列化的详细数据 (ProgressReport/BattleEvent/BattleReplay)
+  string error_message = 5;               // 错误消息 (仅在 ERROR_OCCURRED 时)
+}

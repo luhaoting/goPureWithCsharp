@@ -1,0 +1,97 @@
+# Combined .gitignore for C# (Visual Studio), Go, and Vagrant projects
+
+# ---------- Visual Studio / C# ----------
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+/bin/
+/obj/
+/out/
+*/bin/
+*/obj/
+
+# Visual Studio Code and VS cache
+/.vs/
+.vscode/
+
+# Rider / JetBrains
+.idea/
+
+# NuGet packages
+/packages/
+*.nupkg
+
+# MSBuild generated files
+*.log
+*.vsix
+*.dbmdl
+TestResults/
+
+# Resharper
+_ReSharper*/
+*.DotSettings.user
+
+# Entity Framework
+*.edmx.diagram
+
+# dotCover
+*.dotCover
+
+# temporary files
+*.tmp
+~$*
+
+# ---------- Go (Golang) ----------
+# Binaries for programs and plugins
+/bin/
+/pkg/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Build output
+/build/
+
+# Dependency directories (remove if you vendored deps intentionally)
+/vendor/
+Godeps/
+
+# Go workspace
+# Ignore binaries built by `go install` in GOPATH/bin
+GOPATH/bin/
+
+# Coverage
+*.out
+
+# Misc
+.env
+
+# ---------- Common / OS / Editors ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+/.idea/
+.project
+.classpath
+.settings/
+
+# VS Code workspace settings
+*.code-workspace
+
+# ---------- Vagrant ----------
+.vagrant/
+*.vagrant
+*.box
+Vagrantfile.lock
+vagrant/
+.vagrant.d/

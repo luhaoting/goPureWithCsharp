@@ -1,0 +1,9 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="TestExport.csproj" />
+  <Project Path="WinCall/WinCall.vcxproj" Id="7d271172-04f6-4056-8779-6ec9cd9e1dd7" />
+</Solution>
