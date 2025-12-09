@@ -232,6 +232,41 @@ namespace GoPureWithCsharp
         }
 
         /// <summary>
+        /// 测试回调 - 用于测试 Go 侧的回调是否正确工作
+        /// Go 调用此函数，C# 会创建一个 BattleNotification 并通过回调发送给 Go
+        /// </summary>
+        [UnmanagedCallersOnly(EntryPoint = "TestNotifyCallback")]
+        public static int TestNotifyCallback(int notificationType, long battleID, long timestamp)
+        {
+            try
+            {
+                Console.WriteLine($"[Export] TestNotifyCallback 被调用: Type={notificationType}, BattleID={battleID}, Timestamp={timestamp}");
+                
+                // 构建一个 BattleNotification
+                var notification = new Battle.BattleNotification
+                {
+                    Timestamp = timestamp,
+                    NotificationType = (Battle.NotificationType)notificationType,
+                    BattleId = (uint)battleID,
+                };
+
+                // 序列化通知
+                var notificationData = notification.ToByteArray();
+                
+                // 通过注册的回调发送给 Go
+                Console.WriteLine($"[Export] 通过回调发送通知数据，长度={notificationData.Length}");
+                BattleCallbackManager.NotifyBattle(notificationData);
+                
+                return 0; // 成功
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Export] TestNotifyCallback 异常: {ex}");
+                return -1; // 失败
+            }
+        }
+
+        /// <summary>
         /// 获取库版本
         /// </summary>
         [UnmanagedCallersOnly(EntryPoint = "GetLibVersion")]
