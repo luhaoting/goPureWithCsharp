@@ -16,7 +16,7 @@
 */obj/
 
 # Visual Studio Code and VS cache
-/.vs/
+.vs/
 .vscode/
 
 # Rider / JetBrains
