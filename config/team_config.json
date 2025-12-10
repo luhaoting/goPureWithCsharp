@@ -1,0 +1,9 @@
+{
+  "version": "1.0",
+  "teamConfig": {
+    "maxTeamSize": 5,
+    "minTeamSize": 1,
+    "teamPointLimit": 1000
+  },
+  "description": "Team configuration"
+}

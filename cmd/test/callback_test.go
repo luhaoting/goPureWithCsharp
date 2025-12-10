@@ -45,33 +45,24 @@ func TestGoCallbackFromCSharp(t *testing.T) {
 	}
 	t.Log("✓ Go 侧回调已注册")
 
-	// 步骤 2：模拟 C# 发送通知
-	// 注意：在实际场景中，这会由 C# 侧通过 FFI 回调或其他机制触发
-	// 为了演示，我们直接调用 ProcessNotification
-	t.Log("[步骤 2] 模拟 C# 发送通知给 Go")
+	// 步骤 2：从 C# 侧触发回调（真实调用！）
+	t.Log("[步骤 2] 从 C# 侧触发回调")
 
-	notification := &pb.BattleNotification{
-		BattleId:         50001,
-		NotificationType: pb.NotificationType_EVENT_OCCURRED,
-		Timestamp:        1702175000000,
-	}
+	battleID := uint32(50001)
+	notifType := int(pb.NotificationType_EVENT_OCCURRED)
+	timestamp := int64(1702175000000)
 
-	notifData, err := csharp.MarshalNotification(notification)
+	err = csharp.TestTriggerCallbackFromCSharp(battleID, notifType, timestamp)
 	if err != nil {
-		t.Fatalf("❌ 序列化通知失败: %v", err)
+		t.Fatalf("❌ C# 触发回调失败: %v", err)
 	}
-
-	err = csharp.ProcessNotificationDirect(notifData)
-	if err != nil {
-		t.Fatalf("❌ 处理通知失败: %v", err)
-	}
-	t.Log("✓ 通知已发送并处理")
+	t.Log("✓ C# 已触发回调")
 
 	// 步骤 3：验证 Go 回调是否被调用
 	t.Log("[步骤 3] 验证回调执行结果")
 	callbackMutex.Lock()
 	count := callbackCount
-	notification = lastNotification
+	notification := lastNotification
 	callbackMutex.Unlock()
 
 	if count == 0 {
@@ -85,23 +76,23 @@ func TestGoCallbackFromCSharp(t *testing.T) {
 	}
 
 	t.Logf("✓ 收到通知数据:")
-	t.Logf("  - BattleID: %d (期望: 50001)", notification.BattleId)
-	t.Logf("  - Type: %d (期望: %d)", notification.NotificationType, pb.NotificationType_EVENT_OCCURRED)
-	t.Logf("  - Timestamp: %d (期望: 1702175000000)", notification.Timestamp)
+	t.Logf("  - BattleID: %d (期望: %d)", notification.BattleId, battleID)
+	t.Logf("  - Type: %d (期望: %d)", notification.NotificationType, notifType)
+	t.Logf("  - Timestamp: %d (期望: %d)", notification.Timestamp, timestamp)
 
 	// 断言验证
-	if notification.BattleId != 50001 {
-		t.Errorf("❌ BattleID 不匹配: 得到 %d, 期望 50001", notification.BattleId)
+	if notification.BattleId != battleID {
+		t.Errorf("❌ BattleID 不匹配: 得到 %d, 期望 %d", notification.BattleId, battleID)
 	}
-	if notification.NotificationType != pb.NotificationType_EVENT_OCCURRED {
-		t.Errorf("❌ Type 不匹配: 得到 %d, 期望 %d", notification.NotificationType, pb.NotificationType_EVENT_OCCURRED)
+	if int(notification.NotificationType) != notifType {
+		t.Errorf("❌ Type 不匹配: 得到 %d, 期望 %d", notification.NotificationType, notifType)
 	}
-	if notification.Timestamp != 1702175000000 {
-		t.Errorf("❌ Timestamp 不匹配: 得到 %d, 期望 1702175000000", notification.Timestamp)
+	if notification.Timestamp != timestamp {
+		t.Errorf("❌ Timestamp 不匹配: 得到 %d, 期望 %d", notification.Timestamp, timestamp)
 	}
 
 	t.Log("✓ 所有断言通过！")
-	t.Log("✓ 测试完成 - Go 全局回调被成功调用")
+	t.Log("✓ 测试完成 - Go 全局回调被 C# 成功调用")
 }
 
 // TestMultipleCallbacks 测试多次回调

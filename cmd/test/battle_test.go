@@ -31,7 +31,12 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatalf("库初始化失败: %v", err)
 	}
-	defer csharp.CloseCSharpLib()
+	
+	// defer 必须在函数返回前执行，确保库在所有测试之后关闭
+	defer func() {
+		csharp.CloseCSharpLib()
+	}()
+	
 	fmt.Println("✓ C# 库已初始化")
 	fmt.Println()
 

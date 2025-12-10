@@ -155,7 +155,7 @@ go build -o test_battle cmd/test/main.go
 - ✅ 错误处理
 
 ## ⚠️ 已知限制
-
+### 不要在互相调用的函数中创建内存
 ### 不支持闭包函数指针
 
 **问题**：Go 闭包函数的地址在运行时可能变化，无法作为稳定的函数指针传递给 C# 调用。
@@ -211,19 +211,3 @@ go build -o myapp cmd/example/main.go
 - [Protocol Buffers 指南](https://protobuf.dev)
 - [.NET 8 AOT](https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/)
 
-## 🏆 项目成果
-
-✅ **完整实现** - 所有规划功能已实现  
-✅ **生产就绪** - 错误处理完整，性能达标  
-✅ **文档完善** - 1200+ 行文档，涵盖所有方面  
-✅ **测试完全** - 100% 测试通过  
-
-## 📄 许可证
-
-MIT License - 自由使用和修改
-
----
-
-**最后更新**：2025-12-09 | **版本**：1.0.0 | **维护者**：luhaoting
-
-**立即体验 Go ↔ C# 跨语言调用！** 🚀

@@ -20,6 +20,15 @@ message Team {
 // 战斗请求相关
 // ============================================================================
 
+// 战斗环境
+message BattleEnv {
+    Team atk = 1;        // 攻击方队伍
+    Team def = 2;        // 防守方队伍
+    uint32 battle_id = 3; // 战斗ID
+    int64 timestamp = 4;  // 时间戳
+    uint32 config_version = 5; // 配置版本
+}
+
 // 开始战斗请求
 message StartBattle {
   Team atk = 1;        // 攻击方队伍
@@ -28,11 +37,22 @@ message StartBattle {
   int64 timestamp = 4;  // 时间戳
 }
 
+enum BattleInputOperation {
+    Start = 0;          // 开始战斗
+    TickEvent = 1;    // 游戏tick事件
+    UseItem = 2;      // 使用道具
+    End = 3;           // 结束战斗
+    Pause = 4;         // 暂停战斗
+    Resume = 5;        // 恢复战斗
+    StatusUpdate = 6;  // 状态更新
+    Destroy = 7;       // 销毁战斗 (例如清理资源)
+}
+
 // 战斗输入 (通用请求格式)
 message BattleInput {
-  uint32 op_id = 1;    // 操作ID
+  BattleInputOperation op = 1; // 操作类型
   bytes raw_data = 2;  // 原始数据
-  map<string, string> params = 3; // 参数映射
+  uint64 tick = 3;    // 游戏tick
 }
 
 // 使用道具请求
@@ -165,4 +185,14 @@ message BattleNotification {
   uint32 battle_id = 3;                   // 战斗ID
   bytes payload = 4;                      // 序列化的详细数据 (ProgressReport/BattleEvent/BattleReplay)
   string error_message = 5;               // 错误消息 (仅在 ERROR_OCCURRED 时)
+}
+
+
+message BattleContext {
+    uint32 battle_id = 1;        // 战斗ID
+    BattleInput battle_input = 2;   // 通用战斗输入
+    oneof output {
+        BattleReplay replay = 3;            // 战斗回放
+        BattleResult result = 4;          // 战斗结果
+    }
 }

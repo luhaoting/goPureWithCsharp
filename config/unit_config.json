@@ -1,0 +1,10 @@
+{
+  "version": "1.0",
+  "unitConfig": {
+    "maxUnits": 100,
+    "defaultHealth": 100,
+    "defaultAttack": 10,
+    "defaultDefense": 5
+  },
+  "description": "Unit configuration for battles"
+}

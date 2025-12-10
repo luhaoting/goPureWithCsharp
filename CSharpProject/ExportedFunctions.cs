@@ -274,5 +274,368 @@ namespace GoPureWithCsharp
         {
             return Marshal.StringToHGlobalAnsi("goPureWithCsharp-1.0");
         }
+
+        /// <summary>
+        /// 测试触发回调 - C# 侧主动调用，测试 Go 侧回调是否工作
+        /// 参数: battleId, notificationType, timestamp
+        /// 返回: 0 成功, 负数表示错误
+        /// </summary>
+        [UnmanagedCallersOnly(EntryPoint = "TestTriggerCallback")]
+        public static int TestTriggerCallback(uint battleId, int notificationType, long timestamp)
+        {
+            try
+            {
+                // 构建一个 BattleNotification
+                var notification = new Battle.BattleNotification
+                {
+                    Timestamp = timestamp,
+                    NotificationType = (Battle.NotificationType)notificationType,
+                    BattleId = battleId,
+                };
+
+                // 序列化通知
+                var notificationData = notification.ToByteArray();
+
+                // 方式1：尝试通过 BattleCallbackManager 发送（如果已注册回调）
+                BattleCallbackManager.NotifyBattle(notificationData);
+
+                return 0; // 成功
+            }
+            catch (Exception ex)
+            {
+                System.Console.WriteLine($"[Export] TestTriggerCallback 异常: {ex}");
+                return -1; // 失败
+            }
+        }
+
+        /// <summary>
+        /// 处理通知数据 - 供测试用，让 C# 能够直接触发 Go 侧的通知处理
+        /// 参数: notificationData (指向序列化通知数据的指针), dataLength (数据长度)
+        /// 返回: 0 成功, 负数表示错误
+        /// </summary>
+        [UnmanagedCallersOnly(EntryPoint = "ProcessNotificationFromCSharp")]
+        public unsafe static int ProcessNotificationFromCSharp(byte* notificationData, int dataLength)
+        {
+            if (notificationData == null || dataLength <= 0)
+            {
+                return -1;
+            }
+
+            try
+            {
+                // 复制数据到托管内存
+                byte[] data = new byte[dataLength];
+                fixed (byte* ptr = data)
+                {
+                    System.Buffer.MemoryCopy(notificationData, ptr, dataLength, dataLength);
+                }
+
+                // 通过 BattleCallbackManager 发送给 Go
+                BattleCallbackManager.NotifyBattle(data);
+
+                return 0; // 成功
+            }
+            catch (Exception ex)
+            {
+                System.Console.WriteLine($"[Export] ProcessNotificationFromCSharp 异常: {ex}");
+                return -1; // 失败
+            }
+        }
+
+        // ============================================================================
+        // BattleManager 导出函数
+        // ============================================================================
+
+        /// <summary>
+        /// 加载配置 (由 Go 调用)
+        /// 参数: configLoaderPtr - 指向配置加载器回调函数的指针
+        /// </summary>
+        /// <summary>
+        /// 注册配置加载器 (由 Go 调用)
+        /// </summary>
+        [UnmanagedCallersOnly(EntryPoint = "RegisterConfigLoader")]
+        public static int RegisterConfigLoader(IntPtr configLoaderPtr)
+        {
+            if (configLoaderPtr == IntPtr.Zero)
+            {
+                return -1;
+            }
+
+            var configLoader = Marshal.GetDelegateForFunctionPointer<ConfigLoaderCallback>(configLoaderPtr);
+            BattleManager.RegisterConfigLoader(configLoader);
+            return 0;
+        }
+
+        /// <summary>
+        /// 加载配置 (由 Go 调用)
+        /// 参数: configNamePtr - 配置名称字节数据指针, configNameLen - 名称长度
+        /// </summary>
+        [UnmanagedCallersOnly(EntryPoint = "LoadConfig")]
+        public static int LoadConfig(IntPtr configNamePtr, int configNameLen)
+        {
+            // 从指针读取配置名称字节
+            byte[] configNameBytes = new byte[configNameLen];
+            Marshal.Copy(configNamePtr, configNameBytes, 0, configNameLen);
+            string configName = System.Text.Encoding.UTF8.GetString(configNameBytes);
+
+            return BattleManager.LoadConfig(configName);
+        }
+
+        /// <summary>
+        /// Go 调用 C# 来获取配置数据 (双向函数调用)
+        /// 这个函数在 C# 侧存储了一个配置加载器回调，当被 Go 调用时，
+        /// 它会触发那个回调函数，由 Go 侧实现的配置加载器来加载配置文件
+        /// 
+        /// 流程：
+        /// 1. Go 侧调用此函数：GetConfigLoaderDataCSharp("battle_config.json")
+        /// 2. C# 调用已注册的回调函数（由 Go 侧实现）
+        /// 3. Go 侧回调函数加载文件并返回数据
+        /// 4. C# 将数据返回给 Go
+        /// 
+        /// 参数: configNamePtr - 配置文件名指针, configNameLen - 名称长度
+        ///       outDataPtrPtr - 指向数据指针的指针, outDataLenPtr - 指向数据长度的指针
+        /// 返回: 0 成功, -1 失败
+        /// </summary>
+        [UnmanagedCallersOnly(EntryPoint = "GetConfigLoaderDataCSharp")]
+        public static int GetConfigLoaderDataCSharp(IntPtr configNamePtr, int configNameLen, IntPtr outDataPtrPtr, IntPtr outDataLenPtr)
+        {
+            try
+            {
+                // 从指针读取配置文件名
+                byte[] configNameBytes = new byte[configNameLen];
+                Marshal.Copy(configNamePtr, configNameBytes, 0, configNameLen);
+                string configName = System.Text.Encoding.UTF8.GetString(configNameBytes);
+
+                System.Console.WriteLine($"[Export] GetConfigLoaderDataCSharp 被调用: {configName}");
+
+                // 调用 BattleManager 中已注册的配置加载器
+                // 该回调由 Go 侧提供（通过 RegisterConfigLoader 导出函数）
+                int result = BattleManager.CallConfigLoader(configName, out IntPtr dataPtr, out int dataLen);
+                
+                // 将结果写入输出指针
+                if (outDataPtrPtr != IntPtr.Zero)
+                {
+                    Marshal.WriteIntPtr(outDataPtrPtr, dataPtr);
+                }
+                if (outDataLenPtr != IntPtr.Zero)
+                {
+                    Marshal.WriteInt32(outDataLenPtr, dataLen);
+                }
+                
+                return result;
+            }
+            catch (Exception ex)
+            {
+                System.Console.WriteLine($"[Export] GetConfigLoaderDataCSharp 异常: {ex}");
+                return -1; // 失败
+            }
+        }
+
+        /// <summary>
+        /// 注册战斗结果回调 (由 Go 调用)
+        /// 参数: callbackPtr - 指向结果回调函数的指针
+        /// </summary>
+        [UnmanagedCallersOnly(EntryPoint = "RegisterBattleResultCallback")]
+        public static int RegisterBattleResultCallback(IntPtr callbackPtr)
+        {
+            if (callbackPtr == IntPtr.Zero)
+            {
+                return -1;
+            }
+
+            var resultCallback = Marshal.GetDelegateForFunctionPointer<BattleResultCallback>(callbackPtr);
+            BattleManager.RegisterResultCallback(resultCallback);
+            return 0;
+        }
+
+        /// <summary>
+        /// 创建战斗 (由 Go 调用)
+        /// 参数: battleId, atkTeamId, defTeamId
+        /// 返回: 0 成功, -1 失败
+        /// </summary>
+        [UnmanagedCallersOnly(EntryPoint = "CreateBattle")]
+        public static int CreateBattle(uint battleId, uint atkTeamId, uint defTeamId)
+        {
+            return BattleManager.CreateBattle(battleId, atkTeamId, defTeamId);
+        }
+
+        /// <summary>
+        /// 销毁战斗 (由 Go 调用)
+        /// 参数: battleId
+        /// 返回: 0 成功, -1 失败
+        /// </summary>
+        [UnmanagedCallersOnly(EntryPoint = "DestroyBattle")]
+        public static int DestroyBattle(uint battleId)
+        {
+            return BattleManager.DestroyBattle(battleId);
+        }
+
+        /// <summary>
+        /// Tick 驱动 - 推动所有战斗进行 (由 Go 调用)
+        /// 返回: 处理的战斗数量
+        /// </summary>
+        [UnmanagedCallersOnly(EntryPoint = "OnTick")]
+        public static int OnTick()
+        {
+            return BattleManager.OnTick();
+        }
+
+        /// <summary>
+        /// 获取战斗数量
+        /// 返回: 当前管理的战斗数量
+        /// </summary>
+        [UnmanagedCallersOnly(EntryPoint = "GetBattleCount")]
+        public static int GetBattleCount()
+        {
+            return BattleManager.GetBattleCount();
+        }
+
+        /// <summary>
+        /// 处理战斗输入 (由 Go 调用)
+        /// 参数: battleId, teamId, actionType, actionValue
+        /// 返回: 0 成功, 负数表示错误码
+        /// </summary>
+        [UnmanagedCallersOnly(EntryPoint = "ProcessBattleInput")]
+        public static int ProcessBattleInput(uint battleId, uint teamId, byte actionType, int actionValue)
+        {
+            return BattleInputHandler.ProcessBattleInput(battleId, teamId, actionType, actionValue);
+        }
+
+        /// <summary>
+        /// 设置战斗日志级别 (由 Go 调用)
+        /// 参数: level - 日志级别 (0=Debug, 1=Info, 2=Warn, 3=Error, 4=None)
+        /// 返回: 0 成功, -1 失败
+        /// </summary>
+        [UnmanagedCallersOnly(EntryPoint = "SetBattleLogLevel")]
+        public static int SetBattleLogLevel(int level)
+        {
+            if (level < 0 || level > 4)
+            {
+                return -1;
+            }
+
+            BattleLogger.SetLogLevel((LogLevel)level);
+            return 0;
+        }
+
+        /// <summary>
+        /// 获取当前战斗日志级别 (由 Go 调用)
+        /// 返回: 当前日志级别 (0=Debug, 1=Info, 2=Warn, 3=Error, 4=None)
+        /// </summary>
+        [UnmanagedCallersOnly(EntryPoint = "GetBattleLogLevel")]
+        public static int GetBattleLogLevel()
+        {
+            return (int)BattleLogger.GetLogLevel();
+        }
+
+        /// <summary>
+        /// 启用所有战斗日志 (由 Go 调用)
+        /// </summary>
+        [UnmanagedCallersOnly(EntryPoint = "EnableBattleLogging")]
+        public static void EnableBattleLogging()
+        {
+            BattleLogger.EnableAll();
+        }
+
+        /// <summary>
+        /// 禁用所有战斗日志 (由 Go 调用)
+        /// </summary>
+        [UnmanagedCallersOnly(EntryPoint = "DisableBattleLogging")]
+        public static void DisableBattleLogging()
+        {
+            BattleLogger.DisableAll();
+        }
+
+        // ============================================================================
+        // Go 全局函数调用接口
+        // ============================================================================
+
+        /// <summary>
+        /// 调用 Go 侧的全局函数处理战斗通知
+        /// 参数: battleId, notificationType, timestamp
+        /// 返回: 0 成功, -1 失败
+        /// </summary>
+        [UnmanagedCallersOnly(EntryPoint = "CallGoGlobalHandleBattleNotification")]
+        public static int CallGoGlobalHandleBattleNotification(uint battleId, int notificationType, long timestamp)
+        {
+            try
+            {
+                Console.WriteLine($"[Export] CallGoGlobalHandleBattleNotification 被调用: BattleID={battleId}, Type={notificationType}, Timestamp={timestamp}");
+
+                // 构建通知对象
+                var notification = new Battle.BattleNotification
+                {
+                    BattleId = battleId,
+                    NotificationType = (Battle.NotificationType)notificationType,
+                    Timestamp = timestamp,
+                };
+
+                // 序列化并调用 Go 侧的处理函数
+                var notificationData = notification.ToByteArray();
+                BattleCallbackManager.NotifyBattle(notificationData);
+
+                Console.WriteLine($"[Export] 已将通知转发给 Go 侧的全局函数");
+                return 0; // 成功
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Export] CallGoGlobalHandleBattleNotification 异常: {ex}");
+                return -1; // 失败
+            }
+        }
+
+        /// <summary>
+        /// 调用 Go 侧的简单全局函数 - 用于测试 C# 直接调用 Go 函数
+        /// 参数: battleId (uint), action (字符串)
+        /// 返回: 0 成功, -1 失败
+        /// </summary>
+        [UnmanagedCallersOnly(EntryPoint = "CallGoSimpleGlobalFunction")]
+        public static int CallGoSimpleGlobalFunction(uint battleId, IntPtr actionPtr, int actionLen)
+        {
+            try
+            {
+                // 从指针读取字符串
+                byte[] actionBytes = new byte[actionLen];
+                Marshal.Copy(actionPtr, actionBytes, 0, actionLen);
+                string action = System.Text.Encoding.UTF8.GetString(actionBytes);
+
+                Console.WriteLine($"[Export] CallGoSimpleGlobalFunction 被调用: BattleID={battleId}, Action={action}");
+
+                // 这里可以做一些处理
+                // 注意：实际的 Go 全局函数无法直接从 C# 调用
+                // 但我们可以通过 BattleCallbackManager 或其他方式转发请求
+
+                Console.WriteLine($"[Export] 处理来自 Go 的全局函数调用");
+                return 0; // 成功
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Export] CallGoSimpleGlobalFunction 异常: {ex}");
+                return -1; // 失败
+            }
+        }
+
+        /// <summary>
+        /// 调用 Go 侧的计算函数 - 用于演示函数指针调用
+        /// 参数: a, b (两个 int32)
+        /// 返回: 结果
+        /// </summary>
+        [UnmanagedCallersOnly(EntryPoint = "CallGoCalculateSum")]
+        public static int CallGoCalculateSum(int a, int b)
+        {
+            try
+            {
+                Console.WriteLine($"[Export] CallGoCalculateSum 被调用: {a} + {b}");
+                int result = a + b;
+                Console.WriteLine($"[Export] 计算结果: {result}");
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Export] CallGoCalculateSum 异常: {ex}");
+                return -1; // 失败
+            }
+        }
     }
 }
+

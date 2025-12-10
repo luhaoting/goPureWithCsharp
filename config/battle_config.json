@@ -1,0 +1,9 @@
+{
+  "version": "1.0",
+  "battleConfig": {
+    "maxRounds": 10,
+    "damageMultiplier": 1.2,
+    "criticalChance": 0.15
+  },
+  "description": "Default battle configuration"
+}

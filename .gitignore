@@ -58,7 +58,7 @@ _ReSharper*/
 
 # Test binary
 *.test
-
+test
 # Build output
 /build/
 
@@ -95,3 +95,4 @@ desktop.ini
 Vagrantfile.lock
 vagrant/
 .vagrant.d/
+docs/copilot_docs
