@@ -1,4 +1,4 @@
-module github.com/luhaoting/goPureWithCsharp
+module goPureWithCsharp
 
 go 1.25.2
 

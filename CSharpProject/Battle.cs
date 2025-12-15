@@ -70,5 +70,12 @@ namespace GoPureWithCsharp
                 BattleLogger.Info($"[Battle {BattleId}] ATK={AtkTeamId} 死亡, DEF={DefTeamId} 获胜!");
             }
         }
+    
+        public void ProcessInput(BattleContext ctx)
+        {
+            // 这里可以根据 BattleContext 的内容处理输入
+            BattleLogger.Info($"[Battle {BattleId}] 处理 BattleContext 输入, Tick={ctx.Tick}");
+            // 示例：可以根据 ctx.Option.BattleInput 的内容进行战斗逻辑处理
+        }
     }
 }

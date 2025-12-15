@@ -34,15 +34,14 @@ public class BattleDemo
         return value * 2;
     }
 
-    [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "InjectConfig")]
-    public static int CreateBattle()
+    [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "CsharpPanic")]
+    public static int CsharpPanic()
     {
-        Battle battle = new Battle();
-        battle.Start();
+        // 故意解引用空指针，触发 SIGSEGV 崩溃
+        IntPtr nullPtr = IntPtr.Zero;
+        Marshal.ReadInt32(nullPtr); // 崩溃点
         return 0;
     }
-
-    
    
 }
 

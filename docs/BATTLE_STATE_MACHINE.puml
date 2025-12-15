@@ -1,0 +1,168 @@
+@startuml Battle_State_Machine
+!define INIT #E1F5FF
+!define RUNNING #FFF9C4
+!define FINISHED #C8E6C9
+!define CLEANUP #FFCCBC
+
+skinparam state {
+  BackgroundColor #E1F5FF
+}
+
+state "系统初始化" as Init STARTCOLOR
+state "回调已注册" as CallbackReady
+state "等待战斗请求" as WaitRequest
+state "战斗已创建" as BattleCreated
+state "战斗进行中" as BattleRunning
+state "一回合执行" as RoundExecution PROCESSCOLOR
+state "伤害计算" as DamageCalc PROCESSCOLOR
+state "生死判定" as HealthCheck DECISIONCOLOR
+state "战斗继续\n(HP > 0)" as ContinueBattle
+state "战斗结束\n(HP ≤ 0)" as BattleEnd
+state "结果回调" as ResultCallback
+state "结果解析" as ParseResult PROCESSCOLOR
+state "Destiny判定" as DestinyCheck DECISIONCOLOR
+state "冷却计时" as Cooldown PROCESSCOLOR
+state "Destiny战斗\n创建" as DestinyBattle
+state "清理资源" as Cleanup ENDCOLOR
+
+[*] --> Init: 应用启动
+
+Init --> CallbackReady: init() 注册\nconfigReader和battleOutput
+
+CallbackReady --> WaitRequest: 进入事件循环
+
+WaitRequest --> BattleCreated: CreateBattle()\n接收到请求
+WaitRequest --> WaitRequest: 其他API请求\n(GetCount等)
+
+BattleCreated --> BattleCreated: 可以创建多个\n战斗实例
+
+BattleCreated --> BattleRunning: 启动Ticker\n驱动战斗
+
+BattleRunning --> RoundExecution: OnTick()触发
+
+RoundExecution --> DamageCalc: ExecuteRound()\n开始回合
+
+DamageCalc --> DamageCalc: ATK生成伤害\nDefHealth -= 伤害
+
+DamageCalc --> HealthCheck: 检查\nDefHealth
+
+HealthCheck --> ContinueBattle: DefHealth > 0\n战斗继续
+
+HealthCheck --> BattleEnd: DefHealth ≤ 0\nATK胜利
+HealthCheck --> BattleEnd: AtkHealth ≤ 0\nDEF胜利
+
+ContinueBattle --> BattleRunning: DEF反击\nAtkHealth -= 伤害\nCurrentRound++\nIsFinished=false
+
+BattleEnd --> BattleEnd: IsFinished = true\nWinner = 胜方ID
+
+BattleRunning --> ResultCallback: 下个OnTick()\n检测IsFinished
+
+ResultCallback --> ResultCallback: 构建BattleResult\n序列化Protobuf
+
+ResultCallback --> ParseResult: battleOutput回调\n将数据传回Go
+
+ParseResult --> ParseResult: 反序列化\nBattleResult
+
+ParseResult --> DestinyCheck: 检查\nIsFinished标志
+
+DestinyCheck --> Cleanup: IsFinished = false\n已有其他战斗\n不触发Destiny
+
+DestinyCheck --> Cooldown: IsFinished = true\n条件满足\n生成冷却时间
+
+Cooldown --> Cooldown: randomTicker =\nrand.Intn(maxWait)
+
+Cooldown --> DestinyBattle: 冷却时间已过\n发起Destiny战
+
+DestinyBattle --> WaitRequest: 新战斗加入队列
+
+WaitRequest --> BattleRunning: 继续驱动\n所有进行中的战斗
+
+Cleanup --> WaitRequest: 战斗清理\n循环回等待
+
+BattleRunning --> Cleanup: 所有战斗\n均已结束
+
+BattleRunning --> WaitRequest: 无战斗进行\n返回等待
+
+note right of RoundExecution
+  **ExecuteRound流程**
+  
+  1. CurrentRound++
+  2. 随机伤害: 10-50
+  3. DefHealth -= 伤害
+  4. 检查死亡条件
+  5. 反击伤害计算
+  6. 更新状态
+end note
+
+note right of DamageCalc
+  **伤害计算**
+  
+  ATK伤害 = 
+    Random(10, 50)
+  
+  DEF伤害 = 
+    Random(10, 50) * 
+    DefenseMultiplier
+  
+  (取决于battleInput操作)
+end note
+
+note right of HealthCheck
+  **判定条件**
+  
+  if DefHealth <= 0
+    → ATK胜利
+    → IsFinished=true
+    → Winner=AtkTeamId
+  
+  elif AtkHealth <= 0
+    → DEF胜利
+    → IsFinished=true
+    → Winner=DefTeamId
+  
+  else
+    → 战斗继续
+end note
+
+note right of Cooldown
+  **Destiny冷却机制**
+  
+  maxWait = 5000 (ms)
+  randomTicker = 
+    rand.Intn(maxWait)
+  
+  等待randomTicker毫秒后
+  再创建Destiny战斗
+  
+  目的：避免峰值
+end note
+
+note right of DestinyCheck
+  **Destiny条件**
+  
+  IsFinished == true ✓
+    → 触发Destiny
+  
+  IsFinished == false ✗
+    → 不触发
+  
+  其他进行中战斗多 ✗
+    → 延迟触发
+end note
+
+note bottom of BattleRunning
+  **并行运行**
+  多个战斗可以同时进行
+  通过OnTick()循环驱动
+  每个Tick推进一回合
+end note
+
+legend right
+  | 颜色 | 含义 |
+  | <STARTCOLOR>   start     | 开始状态 |
+  | <PROCESSCOLOR> process  | 处理中 |
+  | <DECISIONCOLOR> decision | 判定点 |
+  | <ENDCOLOR>     end      | 结束状态 |
+endlegend
+
+@enduml

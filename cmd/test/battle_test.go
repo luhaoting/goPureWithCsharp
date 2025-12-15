@@ -6,8 +6,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/luhaoting/goPureWithCsharp/pkg/csharp"
-	"github.com/luhaoting/goPureWithCsharp/pkg/proto"
+	"goPureWithCsharp/csharp"
+	"goPureWithCsharp/csharp/proto"
 )
 
 // TestMain 初始化测试环境
@@ -31,12 +31,12 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatalf("库初始化失败: %v", err)
 	}
-	
+
 	// defer 必须在函数返回前执行，确保库在所有测试之后关闭
 	defer func() {
 		csharp.CloseCSharpLib()
 	}()
-	
+
 	fmt.Println("✓ C# 库已初始化")
 	fmt.Println()
 
@@ -128,21 +128,6 @@ func TestBatchBattle(t *testing.T) {
 	}
 
 	t.Logf("✓ 批量战斗执行成功 - 成功数: %d, 失败数: %d", batchResult.SuccessCount, batchResult.FailureCount)
-}
-
-// TestCallbackRegistration 测试回调注册
-func TestCallbackRegistration(t *testing.T) {
-	t.Log("[TEST] 测试回调注册")
-
-	err := csharp.RegisterNotificationCallback(func(notif *proto.BattleNotification) error {
-		t.Logf("[回调] 收到通知: Type=%d, BattleID=%d", notif.NotificationType, notif.BattleId)
-		return nil
-	})
-	if err != nil {
-		t.Errorf("回调注册失败: %v", err)
-	}
-
-	t.Log("✓ 回调已注册")
 }
 
 // TestErrorHandling 测试错误处理

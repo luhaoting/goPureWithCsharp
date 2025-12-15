@@ -25,7 +25,7 @@ namespace GoPureWithCsharp
         ///     int32_t* response_len
         /// );
         /// </summary>
-        [UnmanagedCallersOnly(EntryPoint = "ProcessProtoMessage")]
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "ProcessProtoMessage")]
         public static void ProcessProtoMessage(IntPtr requestDataPtr, int requestLen, IntPtr responseBufferPtr, IntPtr responseLenPtr)
         {
             try
@@ -125,7 +125,7 @@ namespace GoPureWithCsharp
         ///     int32_t* response_len
         /// );
         /// </summary>
-        [UnmanagedCallersOnly(EntryPoint = "ProcessBatchProtoMessage")]
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "ProcessBatchProtoMessage")]
         public static void ProcessBatchProtoMessage(IntPtr requestDataPtr, int requestLen, IntPtr responseBufferPtr, IntPtr responseLenPtr)
         {
             try
@@ -217,7 +217,7 @@ namespace GoPureWithCsharp
         /// 函数签名 (C 风格):
         /// void RegisterCallback(void (*callback)(const uint8_t* data, int32_t len));
         /// </summary>
-        [UnmanagedCallersOnly(EntryPoint = "RegisterCallback")]
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "RegisterCallback")]
         public static void RegisterCallback(IntPtr callbackPtr)
         {
             try
@@ -235,7 +235,7 @@ namespace GoPureWithCsharp
         /// 测试回调 - 用于测试 Go 侧的回调是否正确工作
         /// Go 调用此函数，C# 会创建一个 BattleNotification 并通过回调发送给 Go
         /// </summary>
-        [UnmanagedCallersOnly(EntryPoint = "TestNotifyCallback")]
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "TestNotifyCallback")]
         public static int TestNotifyCallback(int notificationType, long battleID, long timestamp)
         {
             try
@@ -269,7 +269,7 @@ namespace GoPureWithCsharp
         /// <summary>
         /// 获取库版本
         /// </summary>
-        [UnmanagedCallersOnly(EntryPoint = "GetLibVersion")]
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "GetLibVersion")]
         public static IntPtr GetLibVersion()
         {
             return Marshal.StringToHGlobalAnsi("goPureWithCsharp-1.0");
@@ -280,7 +280,7 @@ namespace GoPureWithCsharp
         /// 参数: battleId, notificationType, timestamp
         /// 返回: 0 成功, 负数表示错误
         /// </summary>
-        [UnmanagedCallersOnly(EntryPoint = "TestTriggerCallback")]
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "TestTriggerCallback")]
         public static int TestTriggerCallback(uint battleId, int notificationType, long timestamp)
         {
             try
@@ -313,7 +313,7 @@ namespace GoPureWithCsharp
         /// 参数: notificationData (指向序列化通知数据的指针), dataLength (数据长度)
         /// 返回: 0 成功, 负数表示错误
         /// </summary>
-        [UnmanagedCallersOnly(EntryPoint = "ProcessNotificationFromCSharp")]
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "ProcessNotificationFromCSharp")]
         public unsafe static int ProcessNotificationFromCSharp(byte* notificationData, int dataLength)
         {
             if (notificationData == null || dataLength <= 0)
@@ -353,24 +353,31 @@ namespace GoPureWithCsharp
         /// <summary>
         /// 注册配置加载器 (由 Go 调用)
         /// </summary>
-        [UnmanagedCallersOnly(EntryPoint = "RegisterConfigLoader")]
-        public static int RegisterConfigLoader(IntPtr configLoaderPtr)
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "RegisterConfigLoader")]
+        public static void RegisterConfigLoader(IntPtr configLoaderPtr)
         {
+            System.Console.WriteLine("[Export-RC] 1. 进入 RegisterConfigLoader");
+            
             if (configLoaderPtr == IntPtr.Zero)
             {
-                return -1;
+                System.Console.WriteLine("[Export-RC] 2. 参数为 NULL，返回");
+                return;
             }
 
+            System.Console.WriteLine("[Export-RC] 3. 参数非 NULL");
+            System.Console.WriteLine("[Export-RC] 4. 正在转换委托");
             var configLoader = Marshal.GetDelegateForFunctionPointer<ConfigLoaderCallback>(configLoaderPtr);
+            System.Console.WriteLine("[Export-RC] 5. 委托转换成功");
+            System.Console.WriteLine("[Export-RC] 6. 调用 BattleManager.RegisterConfigLoader");
             BattleManager.RegisterConfigLoader(configLoader);
-            return 0;
+            System.Console.WriteLine("[Export-RC] 7. 完成，返回");
         }
 
         /// <summary>
         /// 加载配置 (由 Go 调用)
         /// 参数: configNamePtr - 配置名称字节数据指针, configNameLen - 名称长度
         /// </summary>
-        [UnmanagedCallersOnly(EntryPoint = "LoadConfig")]
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "LoadConfig")]
         public static int LoadConfig(IntPtr configNamePtr, int configNameLen)
         {
             // 从指针读取配置名称字节
@@ -396,7 +403,7 @@ namespace GoPureWithCsharp
         ///       outDataPtrPtr - 指向数据指针的指针, outDataLenPtr - 指向数据长度的指针
         /// 返回: 0 成功, -1 失败
         /// </summary>
-        [UnmanagedCallersOnly(EntryPoint = "GetConfigLoaderDataCSharp")]
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "GetConfigLoaderDataCSharp")]
         public static int GetConfigLoaderDataCSharp(IntPtr configNamePtr, int configNameLen, IntPtr outDataPtrPtr, IntPtr outDataLenPtr)
         {
             try
@@ -435,7 +442,7 @@ namespace GoPureWithCsharp
         /// 注册战斗结果回调 (由 Go 调用)
         /// 参数: callbackPtr - 指向结果回调函数的指针
         /// </summary>
-        [UnmanagedCallersOnly(EntryPoint = "RegisterBattleResultCallback")]
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "RegisterBattleResultCallback")]
         public static int RegisterBattleResultCallback(IntPtr callbackPtr)
         {
             if (callbackPtr == IntPtr.Zero)
@@ -443,6 +450,7 @@ namespace GoPureWithCsharp
                 return -1;
             }
 
+            System.Console.WriteLine($"[Export] RegisterBattleResultCallback 被调用 地址 0x{callbackPtr:X}");
             var resultCallback = Marshal.GetDelegateForFunctionPointer<BattleResultCallback>(callbackPtr);
             BattleManager.RegisterResultCallback(resultCallback);
             return 0;
@@ -453,10 +461,16 @@ namespace GoPureWithCsharp
         /// 参数: battleId, atkTeamId, defTeamId
         /// 返回: 0 成功, -1 失败
         /// </summary>
-        [UnmanagedCallersOnly(EntryPoint = "CreateBattle")]
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "CreateBattle")]
         public static int CreateBattle(uint battleId, uint atkTeamId, uint defTeamId)
         {
-            return BattleManager.CreateBattle(battleId, atkTeamId, defTeamId);
+            return BattleManager.CreateBattlee(battleId, atkTeamId, defTeamId);
+        }
+
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "CreateBattleByCtx")]
+        public static int CreateBattleByCtx(uint battleId, uint atkTeamId, uint defTeamId)
+        {
+            return BattleManager.CreateBattlee(battleId, atkTeamId, defTeamId);
         }
 
         /// <summary>
@@ -464,7 +478,7 @@ namespace GoPureWithCsharp
         /// 参数: battleId
         /// 返回: 0 成功, -1 失败
         /// </summary>
-        [UnmanagedCallersOnly(EntryPoint = "DestroyBattle")]
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "DestroyBattle")]
         public static int DestroyBattle(uint battleId)
         {
             return BattleManager.DestroyBattle(battleId);
@@ -474,7 +488,7 @@ namespace GoPureWithCsharp
         /// Tick 驱动 - 推动所有战斗进行 (由 Go 调用)
         /// 返回: 处理的战斗数量
         /// </summary>
-        [UnmanagedCallersOnly(EntryPoint = "OnTick")]
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "OnTick")]
         public static int OnTick()
         {
             return BattleManager.OnTick();
@@ -484,7 +498,7 @@ namespace GoPureWithCsharp
         /// 获取战斗数量
         /// 返回: 当前管理的战斗数量
         /// </summary>
-        [UnmanagedCallersOnly(EntryPoint = "GetBattleCount")]
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "GetBattleCount")]
         public static int GetBattleCount()
         {
             return BattleManager.GetBattleCount();
@@ -495,10 +509,27 @@ namespace GoPureWithCsharp
         /// 参数: battleId, teamId, actionType, actionValue
         /// 返回: 0 成功, 负数表示错误码
         /// </summary>
-        [UnmanagedCallersOnly(EntryPoint = "ProcessBattleInput")]
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "ProcessBattleInput")]
         public static int ProcessBattleInput(uint battleId, uint teamId, byte actionType, int actionValue)
         {
             return BattleInputHandler.ProcessBattleInput(battleId, teamId, actionType, actionValue);
+        }
+
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "ProcessBattleContextInput")]
+        public static int ProcessBattleContextInput(IntPtr buffPtr, int buffLen)
+        {
+
+// 从指针读取字符串
+            byte[] inputBytes = new byte[buffLen];
+            Marshal.Copy(buffPtr, inputBytes, 0, buffLen);
+
+            var battleInputContext = Battle.BattleContext.Parser.ParseFrom(inputBytes);
+            if (battleInputContext == null || battleInputContext.OptionCase != Battle.BattleContext.OptionOneofCase.BattleInput)
+            {
+                return -1; // 无效输入
+            }
+
+            return BattleManager.ProcessBattleContextInput(battleInputContext);
         }
 
         /// <summary>
@@ -506,7 +537,7 @@ namespace GoPureWithCsharp
         /// 参数: level - 日志级别 (0=Debug, 1=Info, 2=Warn, 3=Error, 4=None)
         /// 返回: 0 成功, -1 失败
         /// </summary>
-        [UnmanagedCallersOnly(EntryPoint = "SetBattleLogLevel")]
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "SetBattleLogLevel")]
         public static int SetBattleLogLevel(int level)
         {
             if (level < 0 || level > 4)
@@ -522,7 +553,7 @@ namespace GoPureWithCsharp
         /// 获取当前战斗日志级别 (由 Go 调用)
         /// 返回: 当前日志级别 (0=Debug, 1=Info, 2=Warn, 3=Error, 4=None)
         /// </summary>
-        [UnmanagedCallersOnly(EntryPoint = "GetBattleLogLevel")]
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "GetBattleLogLevel")]
         public static int GetBattleLogLevel()
         {
             return (int)BattleLogger.GetLogLevel();
@@ -531,7 +562,7 @@ namespace GoPureWithCsharp
         /// <summary>
         /// 启用所有战斗日志 (由 Go 调用)
         /// </summary>
-        [UnmanagedCallersOnly(EntryPoint = "EnableBattleLogging")]
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "EnableBattleLogging")]
         public static void EnableBattleLogging()
         {
             BattleLogger.EnableAll();
@@ -540,7 +571,7 @@ namespace GoPureWithCsharp
         /// <summary>
         /// 禁用所有战斗日志 (由 Go 调用)
         /// </summary>
-        [UnmanagedCallersOnly(EntryPoint = "DisableBattleLogging")]
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "DisableBattleLogging")]
         public static void DisableBattleLogging()
         {
             BattleLogger.DisableAll();
@@ -555,7 +586,7 @@ namespace GoPureWithCsharp
         /// 参数: battleId, notificationType, timestamp
         /// 返回: 0 成功, -1 失败
         /// </summary>
-        [UnmanagedCallersOnly(EntryPoint = "CallGoGlobalHandleBattleNotification")]
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "CallGoGlobalHandleBattleNotification")]
         public static int CallGoGlobalHandleBattleNotification(uint battleId, int notificationType, long timestamp)
         {
             try
@@ -589,7 +620,7 @@ namespace GoPureWithCsharp
         /// 参数: battleId (uint), action (字符串)
         /// 返回: 0 成功, -1 失败
         /// </summary>
-        [UnmanagedCallersOnly(EntryPoint = "CallGoSimpleGlobalFunction")]
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "CallGoSimpleGlobalFunction")]
         public static int CallGoSimpleGlobalFunction(uint battleId, IntPtr actionPtr, int actionLen)
         {
             try
@@ -620,7 +651,7 @@ namespace GoPureWithCsharp
         /// 参数: a, b (两个 int32)
         /// 返回: 结果
         /// </summary>
-        [UnmanagedCallersOnly(EntryPoint = "CallGoCalculateSum")]
+        [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "CallGoCalculateSum")]
         public static int CallGoCalculateSum(int a, int b)
         {
             try

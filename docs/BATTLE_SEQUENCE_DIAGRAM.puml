@@ -1,0 +1,105 @@
+@startuml Battle_Sequence_Diagram
+
+participant GBM as "GO Battle\n Manager"
+participant BattleCtrlProxy as "GO BattleCtrl \n Proxy"
+participant CBM as "C# Battle\n Manager"
+participant Engine as "BattleInstance"
+participant Proto as "Protobuf\nMessages"
+
+== 初始化阶段 ==
+GBM ->> GBM: init()
+GBM ->> GBM: 注册 configReader
+GBM ->> GBM: 注册 battleOutput
+
+GBM ->> CBM: RegisterConfigLoader(callback)
+activate CBM #lightblue
+note right of CBM: init C# Battle \nManager Env
+GBM ->> CBM: RegisterBattleCallback(callback)
+deactivate CBM
+
+== 战斗创建 ==
+GBM ->> GBM: createBattle(battleId)
+GBM ->> CBM: CreateBattle(BattleInput)
+activate CBM #lightblue
+CBM ->> CBM: 新建 BattleContext
+CBM -->> GBM: BattleContext
+
+== Ticker驱动循环 ==
+loop 每 100ms 循环
+  GBM ->> CBM: OnTick()
+  activate CBM #lightyellow
+  activate Engine
+  CBM -->> Engine: call all instances tick()
+    Engine ->> Engine: ExecuteRound()
+  note right of Engine
+    - 遍历所有战斗
+    - 执行回合逻辑
+    - 计算伤害
+    - 更新血量
+    - 判定胜负
+  end note
+
+  alt 战斗未结束
+    Engine -->> CBM: 继续执行
+    CBM -->> GBM: 战斗状态
+  else 战斗已结束
+    Engine ->> Proto: 创建 BattleResult
+    note right of Proto
+      BattleResult {
+        winner: int32
+        battleId: int64
+        isFinished: bool
+        timestamp: int64
+      }
+    end note
+    Engine ->> CBM: 标记 isFinished=true
+    CBM ->> GBM: 回调 battleOutput
+    activate GBM
+    GBM ->> Proto: 解析 BattleResult
+    GBM ->> GBM: 检查 isFinished
+    deactivate GBM
+    CBM -->> GBM: 返回
+  end
+  deactivate Engine
+  deactivate CBM
+end
+
+== 输入处理 ==
+GBM ->> CBM: ProcessBattleInput(BattleInput)
+activate CBM
+CBM ->> CBM: 查询 BattleContext
+CBM ->> Engine: 应用输入
+activate Engine
+Engine ->> Engine: 修改状态
+Engine -->> CBM: 返回
+deactivate Engine
+CBM -->> GBM: 处理完成
+deactivate CBM
+
+== Destiny流程 ==
+activate GBM
+GBM ->> GBM: 解析 BattleResult
+alt isFinished == true
+  GBM ->> GBM: 生成 randomTicker (1-5s)
+  GBM ->> GBM: 等待冷却时间
+  GBM ->> CBM: CreateBattle(newBattleInput)
+  activate CBM
+  CBM ->> CBM: 创建新 BattleContext
+  CBM -->> GBM: 新战斗ID
+  deactivate CBM
+else isFinished == false
+  GBM ->> GBM: 继续等待结果
+end
+deactivate GBM
+
+== 清理流程 ==
+alt 超时或异常
+  GBM ->> CBM: CleanupBattle(battleId)
+  activate CBM
+  CBM ->> Engine: 销毁引擎
+  CBM ->> CBM: 清理 BattleContext
+  CBM -->> GBM: 清理完成
+  deactivate CBM
+end
+
+@enduml

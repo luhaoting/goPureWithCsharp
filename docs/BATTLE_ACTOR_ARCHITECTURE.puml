@@ -1,0 +1,49 @@
+@startuml Battle_Actor_Architecture
+
+skinparam backgroundColor #F5F5F5
+
+package "Go Application" #00ADD8 {
+    component "Main Thread" as GoMain
+    component "Ticker Thread" as GoTicker  
+    component "Request Handler" as GoHandler
+    component "init()" as GoInit
+    component "configReader" as GoConfigReader
+    component "battleOutput" as GoBattleOutput
+    component "Destiny Logic" as GoDestiny
+}
+
+package "C# Application" #1F51B6 {
+    component "Exported Functions" as CSExports
+    component "Battle Manager" as CSBattleManager
+    component "SimpleBattle Engine" as CSEngine
+    component "BattleInput Handler" as CSInputHandler
+}
+
+package "Protobuf Messages" #4B9BFF {
+    component "BattleResult" as ProtoResult
+    component "BattleInput" as ProtoInput
+    component "BattleConfig" as ProtoConfig
+}
+
+package "Callback Bridges" #FF6B6B {
+    component "purego" as PuregoNewCallback
+    component "Marshal" as MarshalDelegate
+}
+
+GoMain --> GoInit
+GoInit --> GoConfigReader
+GoInit --> GoBattleOutput
+GoHandler --> GoMain
+GoTicker --> GoMain
+GoHandler --> CSExports
+GoTicker --> CSBattleManager
+CSExports --> CSBattleManager
+CSBattleManager --> CSEngine
+CSBattleManager --> GoConfigReader
+CSBattleManager --> GoBattleOutput
+ProtoResult --> GoDestiny
+GoDestiny --> GoHandler
+PuregoNewCallback -.-> GoConfigReader
+MarshalDelegate -.-> CSBattleManager
+
+@enduml

@@ -19,7 +19,7 @@ namespace GoPureWithCsharp
     /// </summary>
     public static class BattleLogger
     {
-        private static LogLevel _currentLevel = LogLevel.Info;
+        private static LogLevel _currentLevel = LogLevel.Debug;
 
         /// <summary>
         /// 设置日志级别

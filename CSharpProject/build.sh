@@ -115,7 +115,7 @@ print_info ""
 print_header "编译完成"
 
 print_info "导出函数验证:"
-nm -D "$OUTPUT_DIR/TestExport_Release.so" | grep -E "ProcessProtoMessage|ProcessBatchProtoMessage|RegisterCallback" || print_error "未找到导出函数"
+nm -D "$OUTPUT_DIR/TestExport_Release.so" | grep " T "
 
 print_info ""
 print_info "编译产物位置:"

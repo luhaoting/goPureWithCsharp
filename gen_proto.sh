@@ -43,7 +43,7 @@ print_info "protoc 版本: $(protoc --version)"
 
 # 定义输出目录
 PROTO_DIR="protos"
-GO_OUT_DIR="pkg/proto"
+GO_OUT_DIR="csharp/proto"
 CSHARP_OUT_DIR="CSharpProject/Proto"
 
 # 创建输出目录

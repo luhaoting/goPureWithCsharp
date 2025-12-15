@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using Google.Protobuf;
 using GoPureWithCsharp.Battle;
 
 namespace GoPureWithCsharp
@@ -24,14 +25,14 @@ namespace GoPureWithCsharp
     /// <summary>
     /// 战斗结果回调委托 - Go 侧实现
     /// 输出:
-    ///   - outDataPtr: [out] BattleContext 数据指针
-    ///   - outDataLen: [out] BattleContext 数据长度（字节）
+    ///   - outDataPtr: BattleContext 数据指针
+    ///   - outDataLen: BattleContext 数据长度（字节）
     /// 返回值: 0 表示成功, -1 表示失败
     /// </summary>
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     public delegate int BattleResultCallback(
-        out IntPtr outDataPtr,
-        out int outDataLen);
+        IntPtr outDataPtr,
+        int outDataLen);
 
     /// <summary>
     /// 战斗管理器 - 存储和管理所有战斗实例
@@ -41,6 +42,10 @@ namespace GoPureWithCsharp
         private static readonly Dictionary<uint, BattleInstance> _battles = new Dictionary<uint, BattleInstance>();
         private static readonly object _lockObj = new object();
         private static BattleConfig? _config;
+        
+        // 复用的缓冲区，避免频繁分配
+        private static readonly byte[] _outputBuffer = new byte[20480];
+        private static GCHandle _bufferHandle = GCHandle.Alloc(_outputBuffer, GCHandleType.Pinned);
 
         /// <summary>
         /// 委托：由 Go 侧实现，用于获取配置数据
@@ -85,7 +90,7 @@ namespace GoPureWithCsharp
                 // 准备输出参数指针
                 IntPtr outDataPtr = IntPtr.Zero;
                 int outDataLen = 0;
-                IntPtr outDataPtrPtr = Marshal.AllocHGlobal(IntPtr.Size);
+                IntPtr outDataPtrPtr = Marshal.AllocHGlobal(20480); // 假设最大20KB
                 IntPtr outDataLenPtr = Marshal.AllocHGlobal(sizeof(int));
 
                 // 调用 Go 侧加载器
@@ -189,14 +194,14 @@ namespace GoPureWithCsharp
             lock (_lockObj)
             {
                 _resultCallback = resultCallback;
-                BattleLogger.Info("战斗结果回调已注册");
+                BattleLogger.Info($"战斗结果回调已注册 地址 {_resultCallback}");
             }
         }
 
         /// <summary>
         /// 创建战斗 (由 Go 调用)
         /// </summary>
-        public static int CreateBattle(uint battleId, uint atkTeamId, uint defTeamId)
+        public static int CreateBattlee(uint battleId, uint atkTeamId, uint defTeamId)
         {
             lock (_lockObj)
             {
@@ -213,7 +218,7 @@ namespace GoPureWithCsharp
                     // 可以从配置中解析初始血量
                 }
 
-                BattleInstance battle = new BattleInstance(battleId, atkTeamId, defTeamId, initialHealth);
+                BattleInstance battle = new(battleId, atkTeamId, defTeamId, initialHealth);
                 _battles[battleId] = battle;
 
                 BattleLogger.Info($"战斗已创建: ID={battleId}, ATK={atkTeamId}, DEF={defTeamId}");
@@ -261,16 +266,40 @@ namespace GoPureWithCsharp
 
                         if (battle.IsFinished)
                         {
+                            BattleLogger.Debug($"战斗结束开始处理");
                             finishedBattles.Add(battleId);
-
                             // 通知 Go 战斗结果并获取 BattleContext 输出
                             if (_resultCallback != null)
                             {
-                                int result = _resultCallback(out IntPtr dataPtr, out int dataLen);
-                                if (result == 0 && dataPtr != IntPtr.Zero)
+                                BattleLogger.Debug($"结束 处理 回调地址: 0x{_resultCallback:X}");
+
+                                BattleContext ctx = new()
                                 {
-                                    BattleLogger.Debug($"战斗结果已处理: ID={battleId}, 输出长度={dataLen} 字节");
-                                }
+                                    BattleId = battleId,
+                                    BattleOutput = new BattleOutput()
+                                };
+                                BattleResult result = new()
+                                {
+                                    Winner = (uint)(battle.Winner ?? 0),
+                                };
+                                ctx.BattleOutput.Result = result;
+
+                                // 使用复用的缓冲区序列化数据
+                                var codedOutput = new Google.Protobuf.CodedOutputStream(_outputBuffer);
+                                ctx.WriteTo(codedOutput);
+                                codedOutput.Flush();
+                                int dataLen = (int)codedOutput.Position;
+                                
+
+                                BattleContext retctx = BattleContext.Parser.ParseFrom(_outputBuffer, 0, dataLen);
+                                BattleLogger.Debug($"战斗结果序列化完成: ID={retctx.BattleId}, 长度={dataLen} 字节");
+                       
+                                // 使用已钉住的缓冲区指针调用回调
+                                IntPtr bufferPtr = _bufferHandle.AddrOfPinnedObject();
+                                BattleLogger.Debug($"buffout: 0x{_outputBuffer:X} 战斗结数据地址:  0x{bufferPtr:X}, 长度={dataLen} 字节");
+                                BattleLogger.Debug($"战斗结果开始处理");
+                                int callbackResult = _resultCallback(bufferPtr, dataLen);
+                                BattleLogger.Debug($"战斗结果已处理: ID={battleId}, 输出长度={dataLen} 字节");
                             }
                         }
 
@@ -308,6 +337,13 @@ namespace GoPureWithCsharp
             {
                 return _battles.Count;
             }
+        }
+    
+        public static int ProcessBattleContextInput(BattleContext ctx)
+        {
+            GetBattle(ctx.BattleId)?.ProcessInput(ctx);
+
+            return 0;
         }
     }
 }

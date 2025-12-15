@@ -3,7 +3,7 @@ syntax = "proto3";
 package battle;
 
 option csharp_namespace = "GoPureWithCsharp.Battle";
-option go_package = "github.com/luhaoting/goPureWithCsharp/pkg/proto;proto";
+option go_package = "goPureWithCsharp/csharp/proto;proto";
 
 // ============================================================================
 // 基础数据结构
@@ -50,9 +50,17 @@ enum BattleInputOperation {
 
 // 战斗输入 (通用请求格式)
 message BattleInput {
-  BattleInputOperation op = 1; // 操作类型
-  bytes raw_data = 2;  // 原始数据
-  uint64 tick = 3;    // 游戏tick
+  oneof input {
+    BattleUseItem use = 1;
+    BattleResume resume = 2;
+    BattlePause pause = 3;
+    BattleUserOp user_op = 4;
+  }  
+}
+
+message BattleUserOp {
+   int32 char_id = 1;      // 角色ID
+   string operation = 2;   // 操作类型 (attack/defend/use_item
 }
 
 // 使用道具请求
@@ -61,11 +69,24 @@ message BattleUseItem {
   uint32 user_id = 2;           // 使用者ID
   int32 quantity = 3;           // 数量
 }
+message BattleResume {
+    
+}
+
+message BattlePause{
+
+}
 
 // ============================================================================
 // 战斗响应相关
 // ============================================================================
 
+message BattleOutput {
+    oneof output {
+        BattleResult result = 1;       // 战斗结果
+        BattleReplay replay = 2;       // 战斗回放
+    }
+}
 // 战斗结果
 message BattleResult {
   uint32 winner = 1;           // 胜方队伍ID
@@ -190,9 +211,9 @@ message BattleNotification {
 
 message BattleContext {
     uint32 battle_id = 1;        // 战斗ID
-    BattleInput battle_input = 2;   // 通用战斗输入
-    oneof output {
-        BattleReplay replay = 3;            // 战斗回放
-        BattleResult result = 4;          // 战斗结果
+    uint64 tick = 2;          // 当前Tick
+    oneof option {
+        BattleInput battle_input = 3;   // 通用战斗输入
+        BattleOutput battle_output = 4;   // 开始战斗请求
     }
 }

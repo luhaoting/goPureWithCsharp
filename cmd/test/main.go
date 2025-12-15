@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/luhaoting/goPureWithCsharp/pkg/csharp"
+	"goPureWithCsharp/csharp"
 )
 
 func main() {

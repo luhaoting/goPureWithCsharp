@@ -1,0 +1,43 @@
+@startuml Battle_State_Machine
+
+state Init as "初始化"
+state CallbackReady as "回调已注册"
+state WaitRequest as "等待请求"
+state BattleRunning as "战斗进行中"
+state RoundExecution as "执行回合"
+state DamageCalc as "计算伤害"
+state HealthCheck as "判定胜负"
+state BattleEnd as "战斗结束"
+state ParseResult as "解析结果"
+state DestinyCheck as "Destiny判定"
+state Cooldown as "冷却中"
+state Cleanup as "清理资源"
+
+[*] --> Init
+
+Init --> CallbackReady: init()
+CallbackReady --> WaitRequest: ready
+
+WaitRequest --> BattleRunning: CreateBattle
+WaitRequest --> WaitRequest: other
+
+BattleRunning --> RoundExecution: OnTick()
+RoundExecution --> DamageCalc: ExecuteRound()
+DamageCalc --> HealthCheck: calc done
+
+HealthCheck --> BattleRunning: continue (HP>0)
+HealthCheck --> BattleEnd: finished (HP<=0)
+
+BattleEnd --> ParseResult: callback
+
+ParseResult --> DestinyCheck: parse
+
+DestinyCheck --> Cooldown: isFinished=true
+DestinyCheck --> WaitRequest: isFinished=false
+
+Cooldown --> WaitRequest: done
+
+BattleRunning --> Cleanup: cleanup
+Cleanup --> WaitRequest: released
+
+@enduml
