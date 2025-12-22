@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using GoPureWithCsharp;
+using System.Runtime.InteropServices;
 
 
 class Battle
@@ -37,10 +38,14 @@ public class BattleDemo
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "CsharpPanic")]
     public static int CsharpPanic()
     {
-        // 故意解引用空指针，触发 SIGSEGV 崩溃
-        IntPtr nullPtr = IntPtr.Zero;
-        Marshal.ReadInt32(nullPtr); // 崩溃点
-        return 0;
+        return NativeAOTExceptionInjector.WrapExportFunction(() => { 
+            // 无法捕获段错误 基于系统的原生崩溃
+            IntPtr nullPtr = IntPtr.Zero;
+            Marshal.ReadInt32(nullPtr); // 崩溃点
+            Console.WriteLine($"C# Output: Triggering IndexOutOfRangeException");
+            int[] arr = new int[3];
+            return arr[5]; // 托管数组越界 → 触发 IndexOutOfRangeException
+        });
     }
    
 }

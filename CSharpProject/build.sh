@@ -70,6 +70,13 @@ if [ $? -eq 0 ]; then
         install -v "$SO_FILE" "$OUTPUT_DIR/TestExport_Release.so"
         print_info "✓ 复制 Release .so: $OUTPUT_DIR/TestExport_Release.so"
         ls -lh "$OUTPUT_DIR/TestExport_Release.so"
+        
+        # ✅ 复制到 csharp/lib 目录
+        CSHARP_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/csharp/lib"
+        mkdir -p "$CSHARP_LIB_DIR"
+        cp -v "$SO_FILE" "$CSHARP_LIB_DIR/TestExport_Release.so"
+        print_info "✓ 复制到 csharp/lib: $CSHARP_LIB_DIR/TestExport_Release.so"
+        ls -lh "$CSHARP_LIB_DIR/TestExport_Release.so"
     else
         print_error "未找到 Release .so 文件: $SO_FILE"
         find bin -name "*.so" -type f
@@ -101,6 +108,13 @@ if [ $? -eq 0 ]; then
         install -v "$SO_FILE" "$OUTPUT_DIR/TestExport_Debug.so"
         print_info "✓ 复制 Debug .so: $OUTPUT_DIR/TestExport_Debug.so"
         ls -lh "$OUTPUT_DIR/TestExport_Debug.so"
+        
+        # ✅ 复制到 csharp/lib 目录
+        CSHARP_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/csharp/lib"
+        mkdir -p "$CSHARP_LIB_DIR"
+        cp -v "$SO_FILE" "$CSHARP_LIB_DIR/TestExport_Debug.so"
+        print_info "✓ 复制到 csharp/lib: $CSHARP_LIB_DIR/TestExport_Debug.so"
+        ls -lh "$CSHARP_LIB_DIR/TestExport_Debug.so"
     else
         print_error "未找到 Debug .so 文件: $SO_FILE"
         find bin -name "*.so" -type f

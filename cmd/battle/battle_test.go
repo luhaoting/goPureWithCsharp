@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	pb "goPureWithCsharp/csharp/proto"
+	"sync"
 	"testing"
 )
 
@@ -44,14 +45,25 @@ func Test_Battle(t *testing.T) {
 		Def: &pb.Team{TeamId: defTeamID},
 	}
 
-	endCh := make(chan struct{})
+	env2 := &pb.BattleEnv{
+		Atk: &pb.Team{TeamId: atkTeamID},
+		Def: &pb.Team{TeamId: defTeamID},
+	}
+	var waitgroup sync.WaitGroup
+
 	go func() {
 		for outChanput := range outChan {
+
 			fmt.Printf("[BattleOutput] 战斗输出: %+v\n", outChanput)
-			endCh <- struct{}{}
+			waitgroup.Done()
+			// endCh <- struct{}{}
 		}
 	}()
 
+	waitgroup.Add(1)
 	createCh <- env
-	<-endCh
+	waitgroup.Add(1)
+	createCh <- env2
+
+	waitgroup.Wait()
 }

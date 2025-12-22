@@ -1,31 +1,46 @@
 package csharp
 
 import (
+	"os"
+	"runtime/debug"
 	"testing"
 )
 
+var globalBuff = make([]byte, 1024*10)
+
+func ExecptHandler() {
+	exceptmsg := string(globalBuff)
+	println("[Go] 捕获到 C# 异常:", exceptmsg)
+}
+
 func Test_CSharpPainc(t *testing.T) {
 
-	// f, err := os.OpenFile("crash.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	// if err != nil {
-	// 	t.Fatalf("无法创建 crash.log 文件: %v", err)
-	// 	t.Fail()
-	// }
+	cleanup := setupConfigLoaderTest(t)
+	defer cleanup()
 
-	// debug.SetCrashOutput(f, debug.CrashOptions{})
+	f, err := os.OpenFile("crash.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		t.Fatalf("无法创建 crash.log 文件: %v", err)
+		t.Fail()
+	}
 
-	// // CANT CATCH HHHHHA
-	// defer func() {
-	// 	if r := recover(); r != nil {
-	// 		t.Logf("✓ 捕获到 Panic: %v", r)
-	// 	} else {
-	// 		t.Errorf("❌ 未捕获到 Panic")
-	// 	}
-	// }()
+	debug.SetCrashOutput(f, debug.CrashOptions{})
 
-	// cleanup := setupConfigLoaderTest(t)
-	// defer cleanup()
+	// CANT CATCH HHHHHA
+	defer func() {
+		if r := recover(); r != nil {
+			t.Logf("✓ 捕获到 Panic: %v", r)
+		} else {
+			t.Errorf("❌ 未捕获到 Panic")
+		}
+	}()
 
-	// t.Log("[步骤 1] 调用 C# 侧触发 Panic 的函数")
-	// CallCSharpPainc()
+	exCtx := CSharpExceptionContext{
+		CallbackPtr:           ExecptHandler,
+		NotifyExceptionBuffer: globalBuff,
+	}
+
+	InjectCSharpExceptionCallback(exCtx)
+
+	CallCSharpPainc()
 }

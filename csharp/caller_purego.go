@@ -208,6 +208,36 @@ func RegisterCallback(callbackPtr unsafe.Pointer) error {
 	return nil
 }
 
+type NotifyException func()
+
+type CSharpExceptionContext struct {
+	CallbackPtr           NotifyException
+	NotifyExceptionBuffer []byte
+}
+
+func InjectCSharpExceptionCallback(globalCtx CSharpExceptionContext) error {
+	libMutex.RLock()
+	defer libMutex.RUnlock()
+
+	if libHandle == 0 {
+		return fmt.Errorf("C# 库未初始化")
+	}
+
+	fnPtr, err := purego.Dlsym(libHandle, "InjectedExceptionContext")
+	if err != nil {
+		return fmt.Errorf("找不到函数: InjectedExceptionContext - %w", err)
+	}
+
+	callbackPtr := purego.NewCallback(globalCtx.CallbackPtr)
+	purego.SyscallN(
+		uintptr(fnPtr),
+		callbackPtr,
+		uintptr(unsafe.Pointer(&globalCtx.NotifyExceptionBuffer[0])),
+		uintptr(len(globalCtx.NotifyExceptionBuffer)),
+	)
+	return nil
+}
+
 // TestNotifyCallback 测试 C# 侧触发回调
 // 用于验证 Go 回调是否正确工作
 func TestNotifyCallback(notificationType int32, battleID int64, timestamp int64) (int32, error) {

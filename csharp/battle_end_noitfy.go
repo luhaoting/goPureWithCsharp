@@ -39,6 +39,6 @@ func RegisterBattleEndNotify(fn RegisterNotifyCb) error {
 		return fmt.Errorf("RegisterBattleEndNotify 返回错误: %d", result)
 	}
 
-	fmt.Println("[Go] 战斗结束通知已注册给 C# 回调地址 : %p", callbackPtr)
+	// fmt.Printf("[Go] 战斗结束通知已注册给 C# 回调地址 : %p", callbackPtr)
 	return nil
 }
