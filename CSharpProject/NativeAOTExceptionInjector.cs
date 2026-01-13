@@ -14,15 +14,6 @@ namespace GoPureWithCsharp
 
     public static class NativeAOTExceptionInjector
     {
-        // 错误码枚举（统一管理）
-        public enum NativeErrorCode
-        {
-            Success = 0,
-            ParameterError = -1,    // 参数异常
-            BusinessError = -2,     // 业务异常
-            SystemError = -3,       // 系统异常
-            UnknownError = -999     // 未知异常
-        }
 
         /// <summary>
         /// Go侧注入的错误栈写入区指针（缓冲区首地址）
@@ -33,7 +24,6 @@ namespace GoPureWithCsharp
         /// Go侧注入的缓冲区大小（字节）
         /// </summary>
         private static Int32 exBufferSize;
-
 
         private static ExNotifyCallback? exNotifyCallback;
 
@@ -51,7 +41,6 @@ namespace GoPureWithCsharp
             }
 
             exNotifyCallback = Marshal.GetDelegateForFunctionPointer<ExNotifyCallback>(callbackPtr);
-
 
             Console.WriteLine($"C# [InjectedExceptionBuff] Go 注入的异常信息写入栈 地址0x{exBufferPtr:X} 长度 {BufferSize}  通知地址0x{exNotifyCallback:X}");
         }
@@ -86,8 +75,8 @@ namespace GoPureWithCsharp
         /// <param name="ex">捕获的异常</param>
         /// <param name="errorMsgBuffer">Go侧传入的缓冲区指针</param>
         /// <param name="bufferSize">缓冲区大小</param>
-        /// <returns>统一错误码</returns>
-        public static NativeErrorCode HandleException(Exception ex)
+        /// <returns></returns>
+        public static void HandleException(Exception ex)
         {
 
 
@@ -129,16 +118,10 @@ namespace GoPureWithCsharp
             Marshal.Copy(errorBytes, 0, exBufferPtr, copyLength);
             Marshal.WriteByte(exBufferPtr, copyLength, 0);
             exNotifyCallback?.Invoke();
-            // 3. 返回统一错误码（供Go侧快速判断）
-            return ex switch
-            {
-                //ParameterValidationException => NativeErrorCode.ParameterError,
-                //BusinessRuleException => NativeErrorCode.BusinessError,
-                _ => NativeErrorCode.SystemError
-            };
+            return;
         }
 
-        // 辅助方法：JSON字符串转义（避免双引号、换行符等破坏JSON格式）
+
         private static string EscapeJson(string input)
         {
             if (string.IsNullOrEmpty(input)) return "";

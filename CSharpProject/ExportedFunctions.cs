@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Text;
 using Google.Protobuf;
 using GoPureWithCsharp.Battle;
 
@@ -341,6 +342,56 @@ namespace GoPureWithCsharp
                 return -1; // 失败
             }
         }
+
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public unsafe delegate byte* ConfigSetLoaderDelegate(byte* fileNamePtr, int fileNameLen, int* outDataLenPtr);
+
+    internal static ConfigSetLoaderDelegate? ConfigSetLoader;
+    [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "CoreInitConfigSetLoader")]
+    public static int CoreInitConfigSetLoader(IntPtr loaderPtr)
+    {
+        System.Console.WriteLine("[C#] ########## CoreInitConfigSetLoader called");
+        if (loaderPtr == IntPtr.Zero) 
+        {
+            System.Console.WriteLine("[C#] ########## CoreInitConfigSetLoader received null pointer");
+            return 0;
+        }
+        ConfigSetLoader = Marshal.GetDelegateForFunctionPointer<ConfigSetLoaderDelegate>(loaderPtr);
+        // 使用 Go 缓存中存在的配置文件名进行测试
+        LoadConfigSetImpl("battle_config.json");
+
+        return 1;
+    }
+
+    internal static unsafe byte[] LoadConfigSetImpl(string fileName)
+    {
+        if (ConfigSetLoader == null) {
+            System.Console.WriteLine("[C#] ########## LoadConfigSetImpl received null pointer");
+            return null;
+        }
+            
+
+        byte[] fileBytes = Encoding.ASCII.GetBytes(fileName);
+
+        fixed (byte* filePtr = fileBytes)
+        {
+            int dataLength = 0;
+            byte* dataPtr = ConfigSetLoader(filePtr, fileBytes.Length, &dataLength);
+
+            if (dataPtr == null || dataLength <= 0) {
+                System.Console.WriteLine("[C#] ########## ConfigSetLoader received null pointer");
+                return null;
+            }
+                
+
+            byte[] result = new byte[dataLength];
+            Marshal.Copy((IntPtr)dataPtr, result, 0, dataLength);
+            string str = Encoding.UTF8.GetString(dataPtr, dataLength);
+            System.Console.WriteLine("[C#] test LoadConfigSetImpl result: " + str);
+            return result;
+        }
+    }
 
         // ============================================================================
         // BattleManager 导出函数
