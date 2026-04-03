@@ -162,7 +162,7 @@ func CoreInitConfigSetLoader(fn ConfigSetLoaderFunc) (bool, error) {
 		callbackPtr,
 	)
 
-	success := result != 0
+	success := result == 0
 	fmt.Printf("[Go] CoreInitConfigSetLoader 调用完成，结果: %v\n", success)
 
 	savedCallbacks = append(savedCallbacks, callbackPtr)

@@ -348,20 +348,47 @@ namespace GoPureWithCsharp
     public unsafe delegate byte* ConfigSetLoaderDelegate(byte* fileNamePtr, int fileNameLen, int* outDataLenPtr);
 
     internal static ConfigSetLoaderDelegate? ConfigSetLoader;
+    
     [UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) }, EntryPoint = "CoreInitConfigSetLoader")]
-    public static int CoreInitConfigSetLoader(IntPtr loaderPtr)
+    public static unsafe int CoreInitConfigSetLoader(void* loaderPtr)
     {
         System.Console.WriteLine("[C#] ########## CoreInitConfigSetLoader called");
-        if (loaderPtr == IntPtr.Zero) 
+        System.Console.WriteLine($"[C#] ########## loaderPtr value = 0x{(ulong)loaderPtr:X}");
+        System.Console.WriteLine($"[C#] ########## loaderPtr is null? {loaderPtr == null}");
+        
+        if (loaderPtr == null) 
         {
-            System.Console.WriteLine("[C#] ########## CoreInitConfigSetLoader received null pointer");
-            return 0;
+            System.Console.WriteLine("[C#] ########## ERROR: loaderPtr is null!");
+            return 0; // 返回 0 表示失败
         }
-        ConfigSetLoader = Marshal.GetDelegateForFunctionPointer<ConfigSetLoaderDelegate>(loaderPtr);
-        // 使用 Go 缓存中存在的配置文件名进行测试
-        LoadConfigSetImpl("battle_config.json");
+        
+        try
+        {
+            System.Console.WriteLine("[C#] ########## Converting pointer to delegate...");
+            IntPtr loaderIntPtr = (IntPtr)loaderPtr;
+            System.Console.WriteLine($"[C#] ########## IntPtr = 0x{loaderIntPtr:X}");
+            
+            ConfigSetLoader = Marshal.GetDelegateForFunctionPointer<ConfigSetLoaderDelegate>(loaderIntPtr);
+            
+            if (ConfigSetLoader == null) 
+            {
+                System.Console.WriteLine("[C#] ########## ERROR: ConfigSetLoader delegate conversion failed");
+                return -1;
+            }
+            
+            System.Console.WriteLine("[C#] ########## SUCCESS: Delegate conversion successful");
+            
+            // 使用 Go 缓存中存在的配置文件名进行测试
+            LoadConfigSetImpl("battle_config.json");
 
-        return 1;
+            return 0; // 返回 1 表示成功
+        }
+        catch (Exception ex)
+        {
+            System.Console.WriteLine($"[C#] ########## ERROR: Exception in CoreInitConfigSetLoader: {ex}");
+            System.Console.WriteLine($"[C#] ########## Stack trace: {ex.StackTrace}");
+            return 0; // 返回 0 表示失败
+        }
     }
 
     internal static unsafe byte[] LoadConfigSetImpl(string fileName)

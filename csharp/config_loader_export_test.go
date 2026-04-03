@@ -261,6 +261,30 @@ func TestCoreInitConfigSetLoader(t *testing.T) {
 	t.Log("========== 测试完成 ==========")
 }
 
+func Test_CoreInitConfigSetLoaderNUllFnPtr(t *testing.T) {
+	cleanup := setupConfigLoaderTest(t)
+	defer cleanup()
+
+	fn := func(fileNamePtr unsafe.Pointer,
+		fileNameLen int32,
+		outDataLenPtr unsafe.Pointer,
+	) unsafe.Pointer {
+		return nil
+	}
+
+	success, err := CoreInitConfigSetLoader(fn)
+	if err != nil {
+		t.Errorf("❌ CoreInitConfigSetLoader 调用失败: %v", err)
+		t.FailNow()
+	}
+
+	if !success {
+		t.Errorf("❌ CoreInitConfigSetLoader 返回 false，注册失败")
+		t.FailNow()
+	}
+
+}
+
 // TestCoreInitConfigSetLoader_Purego 直接使用 purego 调用 C# 的 CoreInitConfigSetLoader
 // 目的：验证 purego.Dlsym + SyscallN 能正确注册 Go 侧函数指针
 
